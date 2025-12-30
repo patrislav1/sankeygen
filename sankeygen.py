@@ -4,6 +4,7 @@ import sys
 import csv
 import argparse
 from collections import defaultdict
+from plotly import colors
 import plotly.graph_objects as go
 from pathlib import Path
 
@@ -69,6 +70,24 @@ for k, v in sorted(category_totals.items()):
 if not args.sankey:
     sys.exit(0)
 
+TOP_LEVEL_COLORS = [
+    "#4E79A7",  # blue
+    "#F28E2B",  # orange
+    "#E15759",  # red
+    "#76B7B2",  # teal
+    "#59A14F",  # green
+    "#EDC948",  # yellow
+    "#B07AA1",  # purple
+    "#FF9DA7",  # pink
+    "#9C755F",  # brown
+    "#BAB0AC",  # gray
+    "#8CD17D",  # lime green
+    "#FF9F80",  # salmon
+    "#A0CBE8",  # light blue
+    "#C9C9C9",  # light gray
+    "#D37295",  # rose
+]
+
 src_cat = sorted(category_totals.items(), key=lambda x: x[1])[-1]
 print(f"Source category: {src_cat[0]} ({src_cat[1]:.2f})")
 src_cat = src_cat[0]
@@ -97,10 +116,26 @@ for (s, d), v in sorted(sankey_edges.items(), key=lambda x: x[0]):
 # =====================
 labels = sorted(category_totals.keys())
 label_index = {label: i for i, label in enumerate(labels)}
+node_colors = [""] * len(labels)
 
+c_idx = 0
+for i, l in enumerate(labels):
+    if "/" in l:
+        continue
+    node_colors[i] = TOP_LEVEL_COLORS[c_idx]
+    c_idx += 1
+
+for i, l in enumerate(labels):
+    if "/" not in l:
+        continue
+    toplvl_node = l.split("/")[0]
+    node_colors[i] = node_colors[labels.index(toplvl_node)]
+
+print(list(zip(labels, node_colors)))
 sources = []
 targets = []
 values = []
+colors = []
 
 for (src, tgt), value in sankey_edges.items():
     if src not in label_index or tgt not in label_index:
@@ -109,6 +144,9 @@ for (src, tgt), value in sankey_edges.items():
     sources.append(label_index[src])
     targets.append(label_index[tgt])
     values.append(value)  # Sankey requires positive values
+    color = node_colors[labels.index(tgt)].lstrip("#")
+    r, g, b = [int(color[i : i + 2], 16) for i in (0, 2, 4)]
+    colors.append(f"rgba({r},{g},{b},0.35)")
 
 
 # =====================
@@ -116,8 +154,8 @@ for (src, tgt), value in sankey_edges.items():
 # =====================
 fig = go.Figure(
     go.Sankey(
-        node=dict(pad=15, thickness=20, label=labels, align="left"),
-        link=dict(source=sources, target=targets, value=values),
+        node=dict(pad=15, thickness=20, label=labels, align="left", color=node_colors),
+        link=dict(source=sources, target=targets, value=values, color=colors),
     )
 )
 
