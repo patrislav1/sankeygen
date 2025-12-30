@@ -116,7 +116,7 @@ for (src, tgt), value in sankey_edges.items():
 # =====================
 fig = go.Figure(
     go.Sankey(
-        node=dict(pad=15, thickness=20, label=labels),
+        node=dict(pad=15, thickness=20, label=labels, align="left"),
         link=dict(source=sources, target=targets, value=values),
     )
 )
