@@ -32,7 +32,6 @@ args = parser.parse_args()
 # Data containers
 # =====================
 category_totals = defaultdict(float)
-sankey_edges = defaultdict(float)
 
 # =====================
 # Read CSV files
@@ -67,12 +66,32 @@ for csv_file in args.csv_files:
 for k, v in sorted(category_totals.items()):
     print(f"{k:20s} {v:10.2f}")
 
-src_cat = sorted(category_totals.items(), key=lambda x: x[1])[-1]
-print(f"Source category: {src_cat[0]} ({src_cat[1]:.2f})")
-
 if not args.sankey:
     sys.exit(0)
 
+src_cat = sorted(category_totals.items(), key=lambda x: x[1])[-1]
+print(f"Source category: {src_cat[0]} ({src_cat[1]:.2f})")
+src_cat = src_cat[0]
+
+sankey_edges = {}
+for k, v in sorted(category_totals.items()):
+    if v < 0:
+        v = -v
+    else:
+        continue
+    categories = k.split("/")
+    if len(categories) < 2:
+        if categories[0] == src_cat:
+            continue
+        categories = (src_cat, k)
+    else:
+        categories = ("/".join(categories[:-1]), k)
+    sankey_edges[categories] = v
+
+for (s, d), v in sorted(sankey_edges.items(), key=lambda x: x[0]):
+    print(f"{s} -> {d}: {v:.2f}")
+
+# sys.exit(0)
 # =====================
 # Prepare Sankey data
 # =====================
@@ -89,7 +108,7 @@ for (src, tgt), value in sankey_edges.items():
 
     sources.append(label_index[src])
     targets.append(label_index[tgt])
-    values.append(abs(value))  # Sankey requires positive values
+    values.append(value)  # Sankey requires positive values
 
 
 # =====================
