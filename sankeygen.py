@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sys
 import csv
 import argparse
 from collections import defaultdict
@@ -16,13 +17,9 @@ parser = argparse.ArgumentParser(
 parser.add_argument("csv_files", nargs="+", help="One or more CSV files")
 
 parser.add_argument(
-    "--expenses-only",
+    "--sankey",
     action="store_true",
-    help="Only include negative amounts (expenses)",
-)
-
-parser.add_argument(
-    "--title", default="Expenses by Category", help="Title of the Sankey diagram"
+    help="Create sankey diagram",
 )
 
 parser.add_argument(
@@ -60,9 +57,6 @@ for csv_file in args.csv_files:
             # German number format → float
             amount = float(amount_raw.replace(".", "").replace(",", "."))
 
-            if args.expenses_only and amount >= 0:
-                continue
-
             parts = category_path.split("/")
 
             # Accumulate category totals
@@ -70,20 +64,14 @@ for csv_file in args.csv_files:
                 category = "/".join(parts[:i])
                 category_totals[category] += amount
 
-            # Build Sankey edges (FULL paths!)
-            for i in range(1, len(parts)):
-                parent = "/".join(parts[:i])
-                child = "/".join(parts[: i + 1])
-                sankey_edges[(parent, child)] += amount
+for k, v in sorted(category_totals.items()):
+    print(f"{k:20s} {v:10.2f}")
 
-print("=== Kategorien-Summen ===")
-for category, sum in sorted(category_totals.items()):
-    print(f"{category:30s} {sum:10.2f}")
+src_cat = sorted(category_totals.items(), key=lambda x: x[1])[-1]
+print(f"Source category: {src_cat[0]} ({src_cat[1]:.2f})")
 
-print("\n=== Sankey-Edges (Source -> Target) ===")
-for (source, target), value in sankey_edges.items():
-    print(f"{source} -> {target}: {value:.2f}")
-
+if not args.sankey:
+    sys.exit(0)
 
 # =====================
 # Prepare Sankey data
@@ -114,7 +102,7 @@ fig = go.Figure(
     )
 )
 
-fig.update_layout(title_text=args.title, font_size=12)
+fig.update_layout(title_text="Sankey diagram", font_size=12)
 
 # =====================
 # Output
