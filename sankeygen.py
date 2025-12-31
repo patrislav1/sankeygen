@@ -18,6 +18,13 @@ parser = argparse.ArgumentParser(
 parser.add_argument("csv_files", nargs="+", help="One or more CSV files")
 
 parser.add_argument(
+    "--div",
+    type=int,
+    default=1,
+    help="Divisor for values (e.g. 12 to show monthly averages from a one year dataset)",
+)
+
+parser.add_argument(
     "--sankey",
     action="store_true",
     help="Create sankey diagram",
@@ -62,7 +69,7 @@ for csv_file in args.csv_files:
             # Accumulate category totals
             for i in range(1, len(parts) + 1):
                 category = "/".join(parts[:i])
-                category_totals[category] += amount
+                category_totals[category] += amount / args.div
 
 for k, v in sorted(category_totals.items()):
     print(f"{k:20s} {v:10.2f}")
@@ -107,14 +114,15 @@ for k, v in sorted(category_totals.items()):
         categories = ("/".join(categories[:-1]), k)
     sankey_edges[categories] = v
 
-for (s, d), v in sorted(sankey_edges.items(), key=lambda x: x[0]):
-    print(f"{s} -> {d}: {v:.2f}")
+# for (s, d), v in sorted(sankey_edges.items(), key=lambda x: x[0]):
+#    print(f"{s} -> {d}: {v:.2f}")
 
 # sys.exit(0)
 # =====================
 # Prepare Sankey data
 # =====================
-labels = sorted(category_totals.keys())
+labels = [f"{k}\n{v}" for k, v in category_totals.items()]
+labels = sorted(labels)
 label_index = {label: i for i, label in enumerate(labels)}
 node_colors = [""] * len(labels)
 
