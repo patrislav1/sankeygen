@@ -25,6 +25,13 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--threshold",
+    type=float,
+    default=0.0,
+    help="Lower threshold for nodes to show up",
+)
+
+parser.add_argument(
     "--sankey",
     action="store_true",
     help="Create sankey diagram",
@@ -101,9 +108,8 @@ src_cat = src_cat[0]
 
 sankey_edges = {}
 for k, v in sorted(category_totals.items()):
-    if v < 0:
-        v = -v
-    else:
+    v = -v
+    if v < args.threshold:
         continue
     categories = k.split("/")
     if len(categories) < 2:
@@ -121,40 +127,44 @@ for k, v in sorted(category_totals.items()):
 # =====================
 # Prepare Sankey data
 # =====================
-labels = [f"{k}\n{v}" for k, v in category_totals.items()]
-labels = sorted(labels)
-label_index = {label: i for i, label in enumerate(labels)}
-node_colors = [""] * len(labels)
+node_names = sorted(category_totals.keys())
+node_index = {name: i for i, name in enumerate(node_names)}
+node_labels = [
+    f"{n.split('/')[-1]}<br>{abs(category_totals[n]):.2f}€" for n in node_names
+]
+node_colors = [""] * len(node_names)
+node_pads = [20 if "/" in n else 50 for n in node_names]
 
 c_idx = 0
-for i, l in enumerate(labels):
+for i, l in enumerate(node_names):
     if "/" in l:
         continue
     node_colors[i] = TOP_LEVEL_COLORS[c_idx]
     c_idx += 1
 
-for i, l in enumerate(labels):
+for i, l in enumerate(node_names):
     if "/" not in l:
         continue
     toplvl_node = l.split("/")[0]
-    node_colors[i] = node_colors[labels.index(toplvl_node)]
+    node_colors[i] = node_colors[node_index[toplvl_node]]
 
-print(list(zip(labels, node_colors)))
 sources = []
 targets = []
-values = []
-colors = []
+link_colors = []
+link_values = []
+link_labels = []
 
 for (src, tgt), value in sankey_edges.items():
-    if src not in label_index or tgt not in label_index:
+    if src not in node_index or tgt not in node_index:
         continue
 
-    sources.append(label_index[src])
-    targets.append(label_index[tgt])
-    values.append(value)  # Sankey requires positive values
-    color = node_colors[labels.index(tgt)].lstrip("#")
+    sources.append(node_index[src])
+    targets.append(node_index[tgt])
+    link_values.append(value)
+    link_labels.append(f"{value:.2f}€")
+    color = node_colors[node_index[tgt]].lstrip("#")
     r, g, b = [int(color[i : i + 2], 16) for i in (0, 2, 4)]
-    colors.append(f"rgba({r},{g},{b},0.35)")
+    link_colors.append(f"rgba({r},{g},{b},0.35)")
 
 
 # =====================
@@ -162,8 +172,21 @@ for (src, tgt), value in sankey_edges.items():
 # =====================
 fig = go.Figure(
     go.Sankey(
-        node=dict(pad=15, thickness=20, label=labels, align="left", color=node_colors),
-        link=dict(source=sources, target=targets, value=values, color=colors),
+        arrangement="perpendicular",
+        node=dict(
+            thickness=20,
+            label=node_labels,
+            align="center",
+            color=node_colors,
+            pad=node_pads,
+        ),
+        link=dict(
+            source=sources,
+            target=targets,
+            label=link_labels,
+            value=link_values,
+            color=link_colors,
+        ),
     )
 )
 
