@@ -8,6 +8,7 @@ from plotly import colors
 import plotly.graph_objects as go
 from pathlib import Path
 from collections.abc import Callable
+from typing import Optional
 
 
 class ColorPalette:
@@ -46,34 +47,44 @@ class ColorPalette:
 class SankeyNode:
     def __init__(self, name):
         self.children: dict[str, SankeyNode] = {}
-        self.parents: dict[str, SankeyNode] = {}
+        self.parent: Optional[SankeyNode] = None
         self.name = name
         self.color = ""
         self.value = 0.0
         self.is_toplevel = "/" not in name
+        self.is_income = False
 
     def add_child(self, child: "SankeyNode"):
         if child.name not in self.children:
             self.children[child.name] = child
-        if self.name not in child.parents:
-            child.parents[self.name] = self
+        child.parent = self
 
     def rm_child(self, child: "SankeyNode"):
         if child.name in self.children:
             self.children.pop(child.name)
-
-    def set_color(self, color: str):
-        self.color = color
 
     def do_recursive(self, func: Callable[["SankeyNode"], None]):
         for c in self.children.values():
             func(c)
         func(self)
 
+    def __str__(self):
+        return self.name
+
+
+class SankeyLink:
+    def __init__(self, source: SankeyNode, target: SankeyNode):
+        self.source = source
+        self.target = target
+
+    def __str__(self):
+        return f"{self.source.name} -> {self.target.name}"
+
 
 class SankeyNodePool:
     def __init__(self):
         self.pool: dict[str, SankeyNode] = {}
+        self.links: list[SankeyLink] = []
 
     def get_node(self, path: str) -> SankeyNode:
         path_nodes = path.split("/")
@@ -89,13 +100,15 @@ class SankeyNodePool:
 
     def dump(self):
         for name, node in sorted(self.pool.items()):
-            print(f"{name:20s} {node.value:10.2f} {node.color}")
+            print(
+                f"{name:20s} {node.value:10.2f} {'(income)' if node.is_income else ''} {node.color}"
+            )
 
     def purge(self, threshold: float):
         for name, node in list(self.pool.items()):
             if abs(node.value) <= threshold:
-                for p in node.parents.values():
-                    p.rm_child(node)
+                if node.parent:
+                    node.parent.rm_child(node)
                 self.pool.pop(name)
 
     def div(self, divisor: float):
@@ -106,12 +119,27 @@ class SankeyNodePool:
         palette = ColorPalette()
         for node in filter(lambda x: x.is_toplevel, self.pool.values()):
             color = palette.pick_one()
-            node.do_recursive(lambda x: x.set_color(color))
+            node.do_recursive(lambda x: setattr(x, "color", color))
 
     def assign_income_node(self):
         income_node = sorted(self.pool.values(), key=lambda x: x.value)[-1]
         print(f"Income node: {income_node.name} ({income_node.value:.2f})")
+        income_node.do_recursive(lambda x: setattr(x, "is_income", True))
         self.income_node = income_node
+
+    def create_links(self):
+        for node in self.pool.values():
+            if node.is_income:
+                if node.parent:
+                    link = SankeyLink(node, node.parent)
+                else:
+                    continue
+            else:
+                if node.parent:
+                    link = SankeyLink(node.parent, node)
+                else:
+                    link = SankeyLink(self.income_node, node)
+            print(f"{link}")
 
 
 def parse_csv(files) -> SankeyNodePool:
@@ -184,6 +212,7 @@ def main():
     pool.purge(args.threshold)
     pool.assign_colors()
     pool.dump()
+    pool.create_links()
 
 
 if __name__ == "__main__":
