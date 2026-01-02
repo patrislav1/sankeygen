@@ -67,7 +67,7 @@ class SankeyNode:
 
     def do_recursive(self, func: Callable[["SankeyNode"], None]):
         for c in self.children.values():
-            func(c)
+            c.do_recursive(func)
         func(self)
 
     def __str__(self):
@@ -75,7 +75,7 @@ class SankeyNode:
 
     def plotly_node(self):
         return {
-            "label": f"{self.name.split('/')[-1]}<br>{abs(self.value):.2f}€",
+            "label": f"{self.name.split('/')[-1]}<br>{int(abs(self.value))}€",
             "color": ColorPalette.get_rgba(self.color, 1.0),
         }
 
@@ -93,7 +93,7 @@ class SankeyLink:
         return {
             "source": self.source.index,
             "target": self.target.index,
-            "label": f"{self.value:.2f}€",
+            "label": f"{int(self.value)}€",
             "value": self.value,
             "color": ColorPalette.get_rgba(self.target.color, 0.35),
         }
