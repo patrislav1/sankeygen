@@ -73,6 +73,12 @@ class SankeyNode:
     def __str__(self):
         return self.name
 
+    def plotly_node(self):
+        return {
+            "label": f"{self.name.split('/')[-1]}<br>{abs(self.value):.2f}€",
+            "color": ColorPalette.get_rgba(self.color, 1.0),
+        }
+
 
 class SankeyLink:
     def __init__(self, source: SankeyNode, target: SankeyNode):
@@ -82,6 +88,15 @@ class SankeyLink:
 
     def __str__(self):
         return f"{self.source.name} --{self.value:.2f}-> {self.target.name}"
+
+    def plotly_link(self):
+        return {
+            "source": self.source.index,
+            "target": self.target.index,
+            "label": f"{self.value:.2f}€",
+            "value": self.value,
+            "color": ColorPalette.get_rgba(self.target.color, 0.35),
+        }
 
 
 class SankeyNodePool:
@@ -147,6 +162,7 @@ class SankeyNodePool:
                 else:
                     link = SankeyLink(self.income_node, node)
             print(f"{link}")
+            self.links.append(link)
 
 
 def parse_csv(files) -> SankeyNodePool:
@@ -182,7 +198,30 @@ def parse_csv(files) -> SankeyNodePool:
 
 
 def plot_graph(pool: SankeyNodePool):
-    pass
+    nodes = [n.plotly_node() for n in pool.nodes.values()]
+    links = [l.plotly_link() for l in pool.links]
+    print(nodes)
+    print(links)
+    fig = go.Figure(
+        go.Sankey(
+            arrangement="perpendicular",
+            node=dict(
+                thickness=20,
+                align="center",
+                pad=20,
+                label=[n["label"] for n in nodes],
+                color=[n["color"] for n in nodes],
+            ),
+            link=dict(
+                source=[l["source"] for l in links],
+                target=[l["target"] for l in links],
+                label=[l["label"] for l in links],
+                value=[l["value"] for l in links],
+                color=[l["color"] for l in links],
+            ),
+        )
+    )
+    fig.show()
 
 
 def main():
