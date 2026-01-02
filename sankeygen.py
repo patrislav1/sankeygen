@@ -7,9 +7,10 @@ from collections import defaultdict
 from plotly import colors
 import plotly.graph_objects as go
 from pathlib import Path
+from collections.abc import Callable
 
 
-class ColorPicker:
+class ColorPalette:
     COLOR_PALETTE = [
         "4E79A7",  # blue
         "F28E2B",  # orange
@@ -47,7 +48,9 @@ class SankeyNode:
         self.children: dict[str, SankeyNode] = {}
         self.parents: dict[str, SankeyNode] = {}
         self.name = name
+        self.color = ""
         self.value = 0.0
+        self.is_toplevel = "/" not in name
 
     def add_child(self, child: "SankeyNode"):
         if child.name not in self.children:
@@ -58,6 +61,14 @@ class SankeyNode:
     def rm_child(self, child: "SankeyNode"):
         if child.name in self.children:
             self.children.pop(child.name)
+
+    def set_color(self, color: str):
+        self.color = color
+
+    def do_recursive(self, func: Callable[["SankeyNode"], None]):
+        for c in self.children.values():
+            func(c)
+        func(self)
 
 
 class SankeyNodePool:
@@ -78,7 +89,7 @@ class SankeyNodePool:
 
     def dump(self):
         for name, node in sorted(self.pool.items()):
-            print(f"{name:20s} {node.value:10.2f}")
+            print(f"{name:20s} {node.value:10.2f} {node.color}")
 
     def purge(self, threshold: float):
         for name, node in list(self.pool.items()):
@@ -90,6 +101,17 @@ class SankeyNodePool:
     def div(self, divisor: float):
         for node in self.pool.values():
             node.value /= divisor
+
+    def assign_colors(self):
+        palette = ColorPalette()
+        for node in filter(lambda x: x.is_toplevel, self.pool.values()):
+            color = palette.pick_one()
+            node.do_recursive(lambda x: x.set_color(color))
+
+    def assign_income_node(self):
+        income_node = sorted(self.pool.values(), key=lambda x: x.value)[-1]
+        print(f"Income node: {income_node.name} ({income_node.value:.2f})")
+        self.income_node = income_node
 
 
 def parse_csv(files) -> SankeyNodePool:
@@ -119,6 +141,8 @@ def parse_csv(files) -> SankeyNodePool:
                 for i, _ in enumerate(parts):
                     node = pool.get_node("/".join(parts[: i + 1]))
                     node.value += amount  # / args.div
+
+    pool.assign_income_node()
     return pool
 
 
@@ -158,6 +182,7 @@ def main():
     pool = parse_csv(args.csv_files)
     pool.div(args.div)
     pool.purge(args.threshold)
+    pool.assign_colors()
     pool.dump()
 
 
