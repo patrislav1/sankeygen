@@ -10,4 +10,4 @@ The categories assigned in Hibiscus are shown as Sankey nodes.
 ./sankeygen.py --div 12 --plot demo.csv
 ```
 
-[!demo.png](demo.png)
+![demo.png](demo.png)
