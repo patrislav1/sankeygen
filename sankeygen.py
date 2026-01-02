@@ -200,15 +200,13 @@ def parse_csv(files) -> SankeyNodePool:
 def plot_graph(pool: SankeyNodePool):
     nodes = [n.plotly_node() for n in pool.nodes.values()]
     links = [l.plotly_link() for l in pool.links]
-    print(nodes)
-    print(links)
     fig = go.Figure(
         go.Sankey(
             arrangement="perpendicular",
             node=dict(
                 thickness=20,
                 align="center",
-                pad=20,
+                pad=25,
                 label=[n["label"] for n in nodes],
                 color=[n["color"] for n in nodes],
             ),
