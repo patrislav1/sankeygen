@@ -4,8 +4,8 @@ import sys
 import csv
 import argparse
 from collections import defaultdict
-from plotly import colors
 import plotly.graph_objects as go
+from plotly.graph_objs.sankey import Node, Link
 from pathlib import Path
 from collections.abc import Callable
 from typing import Optional
@@ -39,7 +39,8 @@ class ColorPalette:
         self.index %= len(self.COLOR_PALETTE)
         return result
 
-    def get_rgba(self, col_str: str, alpha_val: float) -> str:
+    @classmethod
+    def get_rgba(cls, col_str: str, alpha_val: float) -> str:
         r, g, b = [int(col_str[i : i + 2], 16) for i in (0, 2, 4)]
         return f"rgba({r},{g},{b},{alpha_val})"
 
@@ -51,6 +52,7 @@ class SankeyNode:
         self.name = name
         self.color = ""
         self.value = 0.0
+        self.index = 0
         self.is_toplevel = "/" not in name
         self.is_income = False
 
@@ -76,14 +78,15 @@ class SankeyLink:
     def __init__(self, source: SankeyNode, target: SankeyNode):
         self.source = source
         self.target = target
+        self.value = abs(target.value if not target.is_income else source.value)
 
     def __str__(self):
-        return f"{self.source.name} -> {self.target.name}"
+        return f"{self.source.name} --{self.value:.2f}-> {self.target.name}"
 
 
 class SankeyNodePool:
     def __init__(self):
-        self.pool: dict[str, SankeyNode] = {}
+        self.nodes: dict[str, SankeyNode] = {}
         self.links: list[SankeyLink] = []
 
     def get_node(self, path: str) -> SankeyNode:
@@ -91,44 +94,48 @@ class SankeyNodePool:
         for i, _ in enumerate(path_nodes):
             parent_node = "/".join(path_nodes[:i])
             sub_node = "/".join(path_nodes[: i + 1])
-            if sub_node not in self.pool:
+            if sub_node not in self.nodes:
                 new_node = SankeyNode(sub_node)
-                self.pool[sub_node] = new_node
+                self.nodes[sub_node] = new_node
                 if parent_node:
-                    self.pool[parent_node].add_child(new_node)
-        return self.pool[path]
+                    self.nodes[parent_node].add_child(new_node)
+        return self.nodes[path]
 
     def dump(self):
-        for name, node in sorted(self.pool.items()):
+        for name, node in sorted(self.nodes.items()):
             print(
                 f"{name:20s} {node.value:10.2f} {'(income)' if node.is_income else ''} {node.color}"
             )
 
     def purge(self, threshold: float):
-        for name, node in list(self.pool.items()):
+        for name, node in list(self.nodes.items()):
             if abs(node.value) <= threshold:
                 if node.parent:
                     node.parent.rm_child(node)
-                self.pool.pop(name)
+                self.nodes.pop(name)
 
     def div(self, divisor: float):
-        for node in self.pool.values():
+        for node in self.nodes.values():
             node.value /= divisor
 
     def assign_colors(self):
         palette = ColorPalette()
-        for node in filter(lambda x: x.is_toplevel, self.pool.values()):
+        for node in filter(lambda x: x.is_toplevel, self.nodes.values()):
             color = palette.pick_one()
             node.do_recursive(lambda x: setattr(x, "color", color))
 
+    def assign_indices(self):
+        for index, node in enumerate(self.nodes.values()):
+            node.index = index
+
     def assign_income_node(self):
-        income_node = sorted(self.pool.values(), key=lambda x: x.value)[-1]
+        income_node = sorted(self.nodes.values(), key=lambda x: x.value)[-1]
         print(f"Income node: {income_node.name} ({income_node.value:.2f})")
         income_node.do_recursive(lambda x: setattr(x, "is_income", True))
         self.income_node = income_node
 
     def create_links(self):
-        for node in self.pool.values():
+        for node in self.nodes.values():
             if node.is_income:
                 if node.parent:
                     link = SankeyLink(node, node.parent)
@@ -174,6 +181,10 @@ def parse_csv(files) -> SankeyNodePool:
     return pool
 
 
+def plot_graph(pool: SankeyNodePool):
+    pass
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Generate a Sankey diagram from one or more CSV files (category path based)."
@@ -201,18 +212,18 @@ def main():
         help="Plot sankey diagram",
     )
 
-    parser.add_argument(
-        "--output", help="Optional: write output to HTML file (e.g. sankey.html)"
-    )
-
     args = parser.parse_args()
 
     pool = parse_csv(args.csv_files)
     pool.div(args.div)
     pool.purge(args.threshold)
     pool.assign_colors()
+    pool.assign_indices()
     pool.dump()
     pool.create_links()
+
+    if args.plot:
+        plot_graph(pool)
 
 
 if __name__ == "__main__":
