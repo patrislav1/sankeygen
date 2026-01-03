@@ -12,6 +12,12 @@ $ hibiscus_sankey --div 12 --plot demo.csv
 
 ![demo.png](demo.png)
 
+## Installation
+
+```
+$ pipx install hibiscus_sankey
+```
+
 ## Usage
 
 ```
