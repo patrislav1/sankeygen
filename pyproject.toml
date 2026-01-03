@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hibiscus_sankey"
+version = "0.0.2"
+authors = [
+{ name="Patrick Huesmann", email="info@patrick-huesmann.de" },
+]
+description = "Create Sankey diagrams from Hibiscus csv export"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "plotly"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/patrislav1/hibiscus-sankey"
+
+[project.scripts]
+hibiscus_sankey = "hibiscus_sankey.cli:main"
+

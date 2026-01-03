@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 
-import sys
 import csv
 import argparse
-from collections import defaultdict
 import plotly.graph_objects as go
-from plotly.graph_objs.sankey import Node, Link
 from pathlib import Path
 from collections.abc import Callable
 from typing import Optional
