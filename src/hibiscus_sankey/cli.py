@@ -116,7 +116,7 @@ class SankeyNodePool:
     def dump(self):
         for name, node in sorted(self.nodes.items()):
             print(
-                f"{name:20s} {node.value:10.2f} {'(income)' if node.is_income else ''} {node.color}"
+                f"{name:20s} {node.value:10.2f} {'(income)' if node.is_income else ''}"
             )
 
     def purge(self, threshold: float):
@@ -142,7 +142,6 @@ class SankeyNodePool:
 
     def assign_income_node(self):
         income_node = sorted(self.nodes.values(), key=lambda x: x.value)[-1]
-        print(f"Income node: {income_node.name} ({income_node.value:.2f})")
         income_node.do_recursive(lambda x: setattr(x, "is_income", True))
         self.income_node = income_node
 
@@ -158,7 +157,6 @@ class SankeyNodePool:
                     link = SankeyLink(node.parent, node)
                 else:
                     link = SankeyLink(self.income_node, node)
-            print(f"{link}")
             self.links.append(link)
 
 
