@@ -1,6 +1,6 @@
 # hibiscus-sankey
 
-Creates sankey plot from Hibiscus/Jameica `csv` export.
+Creates sankey plot from [Hibiscus/Jameica](https://www.willuhn.de/products/hibiscus/) `csv` export.
 
 The categories assigned in Hibiscus are shown as Sankey nodes.
 
@@ -42,3 +42,7 @@ In Hibiscus, go to *Start -> Hibiscus -> Umsätze*, select an account and a time
 * If multiple `csv` files are given, the transactions from the files are just accumulated, as if they were all in one file.
   * If a credit card shows up as a separate account in Hibiscus, it can be combined with the main account like this. Make sure that the re-up on the credit card shows up in the same category as the withdraw for the re-up in the main account (this can be easily achieved with [regular expressions](https://www.willuhn.de/wiki/doku.php?id=handbuch:kategorien#suchbegriffe_fuer_automatische_kategorisierung)). The re-up transactions of both accounts should add up to zero.
 * When Plotly gets some parts of the diagram wrong (e.g. intersecting links between nodes), the nodes can easily be rearranged manually in the web browser.
+
+### Other banking software
+
+`hibiscus_sankey` only requires two columns in the `csv`: `"Kategorie-Pfad"`, `"Betrag"` (see `demo.csv`). If you use a different banking tool which also supports CSV export of transactions, it should be easy to adapt either `hibiscus_sankey` or the CSV file to work together.
