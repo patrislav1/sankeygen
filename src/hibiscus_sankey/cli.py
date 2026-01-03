@@ -193,25 +193,25 @@ def parse_csv(files) -> SankeyNodePool:
 
 
 def plot_graph(pool: SankeyNodePool):
-    nodes = [n.plotly_node() for n in pool.nodes.values()]
-    links = [l.plotly_link() for l in pool.links]
+    plotly_nodes: dict[str, int | str | list] = dict(
+        thickness=20,
+        align="center",
+        pad=25,
+    )
+
+    for k in next(iter(pool.nodes.values())).plotly_node().keys():
+        plotly_nodes[k] = [n.plotly_node()[k] for n in pool.nodes.values()]
+
+    plotly_links: dict[str, list] = {}
+
+    for k in pool.links[0].plotly_link().keys():
+        plotly_links[k] = [l.plotly_link()[k] for l in pool.links]
+
     fig = go.Figure(
         go.Sankey(
             arrangement="perpendicular",
-            node=dict(
-                thickness=20,
-                align="center",
-                pad=25,
-                label=[n["label"] for n in nodes],
-                color=[n["color"] for n in nodes],
-            ),
-            link=dict(
-                source=[l["source"] for l in links],
-                target=[l["target"] for l in links],
-                label=[l["label"] for l in links],
-                value=[l["value"] for l in links],
-                color=[l["color"] for l in links],
-            ),
+            node=plotly_nodes,
+            link=plotly_links,
         )
     )
     fig.show()
